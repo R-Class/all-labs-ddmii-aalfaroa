@@ -1,0 +1,96 @@
+---
+title: "Lab3-DM-II"
+author: "Alejandro Alfaro"
+date: "2/13/2017"
+output: github_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set( message=F, warning=F )
+library(devtools)
+library(censusapi)
+library(plyr)
+library( maptools )
+library( sp )
+library(maps)
+library(classInt)
+```
+
+```{r, echo=FALSE}
+mycesuskey <- "6623ba8c58d3b2eeec361d16664573e96d878534"
+dat <- getCensus(name = "acs5", vintage= "2015",
+                       key = mycesuskey, vars= c("NAME","B23025_005E","B19013_001E", "B22003_002E"),
+                       region="tract:*", regionin="State:36")
+dat <- subset(dat, county == "067")
+dat <- rename(dat, c("B22003_002E"="H_SNAP", "B19013_001E"="Med_H_Inc", "B23025_005E"="Unemp"))
+
+dir.create( "shapefiles" )
+setwd( "./shapefiles" )
+download.file("ftp://ftp2.census.gov/geo/tiger/TIGER2010/TRACT/2010/tl_2010_36067_tract10.zip", "onondaga census tracts.zip")
+unzip( "onondaga census tracts.zip" )
+file.remove( "onondaga census tracts.zip" )
+syr <- readShapePoly( fn="tl_2010_36067_tract10", proj4string=CRS("+proj=longlat +datum=WGS84") )
+
+color.function <- colorRampPalette( c("steel blue","light gray","firebrick4" ) )
+col.ramp <- color.function( 5 )
+color.function2 <- colorRampPalette( c("firebrick4","light gray","steel blue") )
+col.ramp2 <- color.function2( 5 )
+
+color.vector1 <- cut( rank(dat$Unemp), breaks=5, labels=col.ramp )
+color.vector1 <- as.character( color.vector1 )
+this.order1 <- match( syr$TRACTCE10, dat$tract )
+color.vec.ordered1 <- color.vector1[ this.order1 ]
+
+color.vector2 <- cut( rank(dat$Med_H_Inc), breaks=5, labels=col.ramp2 )
+color.vector2 <- as.character( color.vector2 )
+this.order2 <- match( syr$TRACTCE10, dat$tract )
+color.vec.ordered2 <- color.vector2[ this.order2 ]
+
+color.vector3 <- cut( rank(dat$H_SNAP), breaks=5, labels=col.ramp )
+color.vector3 <- as.character( color.vector3 )
+this.order3 <- match( syr$TRACTCE10, dat$tract )
+color.vec.ordered3 <- color.vector3[ this.order3 ]
+
+brks1<-classIntervals(dat$Unemp, n=5, style="quantile")
+brks2<-classIntervals(dat$Med_H_Inc, n=5, style="quantile")
+brks3<-classIntervals(dat$H_SNAP, n=5, style="quantile")
+
+par(mar=c(1,1,1,0)+0.1)
+plot(syr, 
+     main="Unemployment", 
+     col=color.vec.ordered1, 
+     border="gray80")
+legend("bottomright",
+       legend = leglabs(brks1$brks), 
+       title = "Unemployed Households",
+       fill = col.ramp,
+       cex = 0.6,
+       border = "black",
+       text.font=4,
+       bty = "n")
+plot(syr,
+     main="Median Household Income",
+     col=color.vec.ordered2,
+     border="gray80")
+legend("bottomright",
+       legend = leglabs(brks2$brks), 
+       title = "Median Household Income",
+       fill = col.ramp2,
+       cex = 0.6,
+       border = "black",
+       text.font=4,
+       bty = "n")
+plot(syr, 
+     main="Household received SNAP", 
+     col=color.vec.ordered3, 
+     border="gray80")
+legend("bottomright",
+       legend = leglabs(brks3$brks), 
+       title = "Household received SNAP",
+       fill = col.ramp,
+       cex = 0.6,
+       border = "black",
+       text.font=4,
+       bty = "n")
+```
+

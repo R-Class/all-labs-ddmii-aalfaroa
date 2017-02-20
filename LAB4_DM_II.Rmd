@@ -1,0 +1,104 @@
+---
+title: "Lab4-DM-II"
+author: "Alejandro Alfaro"
+date: "2/16/2017"
+output: github_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set( message=F, warning=F )
+library(devtools)
+library(censusapi)
+library(plyr)
+library( maptools )
+library( sp )
+library(maps)
+library(classInt)
+library( dplyr )
+library( pander )
+library( RColorBrewer )
+library(scales)
+```
+
+```{r, echo=FALSE}
+dat <- read.csv( "https://raw.githubusercontent.com/lecy/maps-in-R/master/Data/syr_parcels.csv" )
+dat <- tbl_df( dat )
+```
+###Question 1: How many single family homes are in each neighborhood?
+
+```{r, echo=FALSE}
+dat.small <- select( dat, Acres, LandUse, AssessedVa, AssessedLa, YearBuilt, Nhood )
+dat.filtered <- filter( dat.small, YearBuilt != 0, LandUse == "Single Family")
+dat.hoods <- group_by( dat.filtered, Nhood )
+Tabla1 <- summarize( dat.hoods, ParcelCount=n()) 
+arrange(Tabla1, desc(ParcelCount) ) %>% pander
+
+setwd( "/Users/AlejandroA/Documents/Maxwell/Spring-2017/Independent Study - R Project II/Homework 3-4/Lab4/01-05-2015" )
+syr <- readShapePoly( fn="01-05-2015", proj4string=CRS("+proj=longlat +datum=WGS84") )
+
+these.singleF <- syr$LandUse == "Single Family"
+singleF <- syr[ these.singleF , ]
+these.singleF[ is.na(these.singleF) ] <- F
+singleF <- syr[ these.singleF , ]
+palette(rainbow(31))
+plot( syr,  border="gray80", main="Single Family Homes by Neighborhood")
+plot( singleF, border="gray80", col=syr$Nhood, add=T)
+```
+
+
+###Question 2: Where does land in Syracuse have the highest value?
+```{r, echo=FALSE}
+dat.filtered2 <- filter( dat.small, YearBuilt != 0, LandUse == "Single Family", AssessedVa > 200000)
+dat.hoods2 <- group_by( dat.filtered2, Nhood )
+Tabla2 <- summarize( dat.hoods2, ParcelCount=n()) 
+Tabla3 <- merge(Tabla1, Tabla2, by= "Nhood", all.y = T)
+Tabla3 <- mutate( Tabla3, AspercentOfTotal = (ParcelCount.y / ParcelCount.x)*100)
+Tabla3$AspercentOfTotal <- round(Tabla3$AspercentOfTotal, digits = 2)
+Tabla3 <- arrange(Tabla3, desc(AspercentOfTotal) )
+Tabla3 <- select(Tabla3, Nhood, AspercentOfTotal)
+Tabla3 %>% pander
+
+syr$LandValPerAcre <- syr$AssessedLa / syr$Acres
+syr$LandValPerAcre <- round(syr$LandValPerAcre, digits = 0)
+
+color.function <- colorRampPalette( c("firebrick4","light gray","steel blue") )
+col.ramp <- color.function( 10 )
+color.vector1 <- cut( rank(syr$LandValPerAcre), breaks=10, labels=col.ramp )
+color.vector1 <- as.character( color.vector1 )
+brks1<-classIntervals(syr$LandValPerAcre, n=10, style="quantile")
+
+par(mar=c(1,1,1,0)+0.1)
+plot(syr, main="Value per Acre of all Parcels in Syracuse", col=color.vector1, border="gray80")
+legend("bottomright", legend = leglabs(brks1$brks), title = "Value per Acre",
+       fill = col.ramp, cex = 0.6, border = "black", text.font=1, bty = "n")
+```
+
+
+###Question 3: What is the age of single family homes in each neighborhood?
+```{r, echo=FALSE}
+dat.hoods3 <- mutate( dat.filtered, Age = 2016-YearBuilt)
+dat.hoods3 <- group_by( dat.hoods3, Nhood)
+Tabla4 <- summarize( dat.hoods3, TenthPercentile = round(quantile(Age,.10, na.rm = T),0), 
+                     TwentiethFivePercentile = round(quantile(Age,.25, na.rm = T),0), 
+                     FiftiethPercentile = round(quantile(Age,.50, na.rm = T),0), 
+                     SeventyFifthPercentile = round(quantile(Age,.75, na.rm = T),0), 
+                     NinetiethPercentile = round(quantile(Age,.90, na.rm = T),0), 
+                     ParcelCount=n())
+arrange(Tabla4, desc(ParcelCount) ) %>% pander
+
+nice.labels <- c("1880-1890","1890-1900", "1900-1910","1910-1920", "1920-1930","1930-1940",
+                 "1940-1950","1950-1960", "1960-1970","1970-1980","1980-1990","1990-2000", 
+                 "2000-2010","2010-2020" )
+col.ramp2 <- rainbow(14)
+singleF$YearBuilt <- as.character(singleF$YearBuilt)
+singleF$YearBuilt <- as.numeric(singleF$YearBuilt)
+color.vector2 <- cut( singleF$YearBuilt, breaks=seq(from=1880,to=2020, by=10), labels=col.ramp2)
+color.vector2 <- as.character( color.vector2 )
+
+par(mar=c(1,1,1,1)+0.1)
+plot( syr,  border="gray80", main="Single Family Units by Decade in Syracuse")
+plot(singleF, col=color.vector2, border="gray80", add=T)
+legend("bottomright", legend = nice.labels, title = "Decade Built",
+       fill = col.ramp2, cex = 0.5, border = "black", text.font=4, bty = "n")
+```
+
