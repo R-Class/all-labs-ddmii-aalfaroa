@@ -1,7 +1,7 @@
 ---
-title: "Lab 5"
+title: "Lab_5"
 author: "Alejandro Alfaro"
-date: "2/20/2017"
+date: "2/27/2017"
 output: github_document
 ---
 
@@ -14,10 +14,10 @@ library( RCurl )
 library(maptools)
 library(devtools)
 library(censusapi)
-library(plyr)
 library(openxlsx)
 library( ggmap )
 library(dplyr)
+library(pander)
 ```
 
 
@@ -39,27 +39,28 @@ dathouse$lot.size <- as.numeric( gsub( ",","", dathouse$lot.size ) )
 dathouse$sqft <- as.numeric( gsub( ",","", dathouse$sqft ) )
 dathouse$lot.size[ is.na( dathouse$lot.size ) ] <- mean( dathouse$lot.size, na.rm=T )
 
-houses <- dathouse[ , c("address","zip") ]
-houses$address <- gsub( ",", "", houses$address )
-houses$address <- gsub( "\\.", "", houses$address )
-addresses <- paste( houses$address, "Syracuse, NY", houses$zip, sep=", " )
-lat.long <- geocode( addresses )
-geocodehouses <- lat.long
-dathouse$lon <- lat.long$lon
-dathouse$lat <- lat.long$lat
-rm(houses)
-rm(addresses)
-rm(lat.long)
+# houses <- dathouse[ , c("address","zip") ]
+# houses$address <- gsub( ",", "", houses$address )
+# houses$address <- gsub( "\\.", "", houses$address )
+# addresses <- paste( houses$address, "Syracuse, NY", houses$zip, sep=", " )
+# lat.long <- geocode( addresses )
+# geocodehouses <- lat.long
+# write.csv(geocodehouses, file="HousesGeocode.csv")
+geocodehouses <- read.csv("HousesGeocode.csv")
+dathouse$lon <- geocodehouses$lon
+dathouse$lat <- geocodehouses$lat
+rm(geocodehouses)
 ```
 
 
 # 2. Add Census Tracts to each Home
 ```{r}
-dir.create( "shapefiles" )
+# #dir.create( "shapefiles" )
+# setwd( "./shapefiles" )
+# download.file("ftp://ftp2.census.gov/geo/tiger/TIGER2010/TRACT/2010/tl_2010_36067_tract10.zip", "onondaga census tracts.zip")
+# unzip( "onondaga census tracts.zip" )
+# file.remove( "onondaga census tracts.zip" )
 setwd( "./shapefiles" )
-download.file("ftp://ftp2.census.gov/geo/tiger/TIGER2010/TRACT/2010/tl_2010_36067_tract10.zip", "onondaga census tracts.zip")
-unzip( "onondaga census tracts.zip" )
-file.remove( "onondaga census tracts.zip" )
 onondaga <- readShapePoly( fn="tl_2010_36067_tract10", proj4string=CRS("+proj=longlat +datum=WGS84") )
 
 #Spatial join 1
@@ -75,15 +76,17 @@ rm(pts.poly)
 
 # 3. Add Census Data to Each Home
 ```{r}
+library(plyr)
+library(dplyr)
 mycesuskey <- "6623ba8c58d3b2eeec361d16664573e96d878534"
 datcensus <- getCensus(name = "acs5", vintage= "2015",
-                 key = mycesuskey, vars= c("NAME","B17001_002E","B19013_001E", "B01001A_001E", 
+                 key = mycesuskey, vars= c("NAME","B17001_002E","B19013_001E", "B01001A_001E",
                                            "B01001B_001E", "B01001D_001E", "B01001I_001E"),
                  region="tract:*", regionin="State:36")
 datcensus <- subset(datcensus, county == "067")
-datcensus <- rename(datcensus, c("B17001_002E"="PovertyLevel", "B19013_001E"="MedHInc", 
-                           "B01001A_001E"="White", "B01001B_001E"="Black", "B01001D_001E"="Asian",
-                           "B01001I_001E"="Latino"))
+datcensus <- plyr::rename(datcensus, c("B17001_002E"="PovertyLevel", "B19013_001E"="MedHInc",
+                                 "B01001A_001E"="White", "B01001B_001E"="Black",
+                                 "B01001D_001E"="Asian", "B01001I_001E"="Latino"))
 dathouse <- merge(x=dathouse, y=datcensus, by.x="TRACTCE10", by.y="tract",all.x=T)
 rm(mycesuskey)
 rm(datcensus)
@@ -93,19 +96,18 @@ rm(datcensus)
 # 4. Aggregrate by Census tract and add to the dataset
 ```{r}
 # Add Crime data
-
-setwd("/Users/AlejandroA/Documents/Maxwell/Spring-2017/Independent Study - R Project II/Homework 5")
 crimedata <- read.xlsx("Crime in Syracuse Dec to Jan 2014.xlsx")
-addresses <- paste( crimedata$Address, crimedata$City, "NY", sep=", " )
-lat.long <- geocode( addresses )
-geocodecrime <- lat.long
-crimedata$lon <- lat.long$lon
-crimedata$lat <- lat.long$lat
+# addresses <- paste( crimedata$Address, crimedata$City, "NY", sep=", " )
+# lat.long <- geocode( addresses )
+# geocodecrime <- lat.long
+# write.csv(geocodecrime, file="CrineGeocode.csv")
+geocodecrime <- read.csv("CrimeGeocode.csv")
+crimedata$lon <- geocodecrime$lon
+crimedata$lat <- geocodecrime$lat
 crimedatafiltered <- is.na(!crimedata$lat)
 crimedata <- crimedata[!crimedatafiltered,]
-rm(addresses)
-rm(lat.long)
 rm(crimedatafiltered)
+rm(geocodecrime)
 
 #Spatial join 2
 coordinates(crimedata) = ~lon+lat
@@ -120,7 +122,11 @@ dathouse <- merge(x=dathouse, y=crimedatafinal, by.x="TRACTCE10", by.y="Ctract",
 rm(poly.data.matched.to.points)
 rm(pts.poly)
 rm(crimedatafinal)
+rm(crimedata)
 ```
 
 
-#Edits
+#Printing
+```{r}
+head(dathouse, 10)
+```
