@@ -41,7 +41,7 @@ singleF <- syr[ these.singleF , ]
 these.singleF[ is.na(these.singleF) ] <- F
 singleF <- syr[ these.singleF , ]
 palette(rainbow(31))
-plot( syr,  border="gray80", main="Single Family Homes by Neighborhood")
+plot( syr,  border=NULL, main="Single Family Homes by Neighborhood")
 plot( singleF, border="gray80", col=syr$Nhood, add=T)
 ```
 
