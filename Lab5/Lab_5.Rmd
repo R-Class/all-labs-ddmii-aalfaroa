@@ -126,7 +126,8 @@ rm(crimedata)
 ```
 
 
-#Printing
+#Saving & Printing
 ```{r}
+write.csv(dathouse, file="HousingData_All.csv")
 head(dathouse, 10)
 ```
