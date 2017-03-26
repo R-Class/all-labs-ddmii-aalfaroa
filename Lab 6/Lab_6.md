@@ -108,7 +108,6 @@ poly.data.matched.to.points <- over( lon.lat, buff3 )
 dathouse <- cbind( dathouse, poly.data.matched.to.points )
 names(dathouse)[names(dathouse)=="poly.data.matched.to.points"] <- "Schoolbuff"
 rm(poly.data.matched.to.points)
-write.csv(dathouse, file="dathouse_all.csv")
 head(dathouse, 5)
 ```
 
