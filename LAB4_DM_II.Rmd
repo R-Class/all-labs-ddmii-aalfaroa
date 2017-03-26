@@ -40,9 +40,8 @@ these.singleF <- syr$LandUse == "Single Family"
 these.singleF[ is.na(these.singleF) ] <- F
 singleF <- syr[ these.singleF , ]
 palette(rainbow(31))
-par(mar=c(1,1,1,0)+0.1)
-plot( syr,  border="gray90", main="Single Family Homes by Neighborhood")
-plot( singleF, border="gray90", col=syr$Nhood, add=T)
+plot( syr,  border=NULL, main="Single Family Homes by Neighborhood")
+plot( singleF, border="gray80", col=syr$Nhood, add=T)
 ```
 
 
@@ -95,9 +94,15 @@ singleF$YearBuilt <- as.numeric(singleF$YearBuilt)
 color.vector2 <- cut( singleF$YearBuilt, breaks=seq(from=1880,to=2020, by=10), labels=col.ramp2)
 color.vector2 <- as.character( color.vector2 )
 
+<<<<<<< HEAD
 par(mar=c(1,1,1,1)+0.1)
 plot( syr,  border="gray90", main="Single Family Units by Decade in Syracuse")
 plot(singleF, col=color.vector2, border="gray90", add=T)
+=======
+par(mar=c(1,1,1,1)+0.1) 
+plot( syr,  border="gray80", main="Single Family Units by Decade in Syracuse")
+plot(singleF, col=color.vector2, border="gray80", add=T)
+>>>>>>> 9eeea47667044a93437dfb5792a06aa7a31fc559
 legend("bottomright", legend = nice.labels, title = "Decade Built",
        fill = col.ramp2, cex = 0.5, border = "black", text.font=4, bty = "n")
 ```
